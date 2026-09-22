@@ -1,0 +1,80 @@
+// Prisma schema for the appointment-booking assessment app.
+//
+// Assumption: one physical calendar / one set of "services" shared by every
+// user (no multi-tenancy / business_id, per the assessment's cut scope).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+enum ChatRole {
+  user
+  assistant
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  name         String
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  appointments Appointment[]
+  chatSessions ChatSession[]
+
+  @@map("users")
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  serviceName String            @map("service_name")
+  scheduledAt DateTime          @map("scheduled_at")
+  status      AppointmentStatus @default(pending)
+  notes       String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scheduledAt])
+  @@map("appointments")
+}
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  sessionId   String   @map("session_id")
+  role        ChatRole
+  content     String
+  // Structured extraction from the AI service for assistant messages
+  // (intent/service/date/time/isComplete) - nullable because user messages
+  // never have it, and older rows may predate a metadata shape change.
+  aiMetadata  Json?    @map("ai_metadata")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("chat_messages")
+}
