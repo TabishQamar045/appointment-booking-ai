@@ -1,6 +1,9 @@
 import type { ApiErrorBody } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100";
+// Relative: requests go to the frontend's own origin and are proxied to the
+// backend by the rewrites in next.config.ts, keeping the auth cookie
+// first-party. See next.config.ts for why.
+const API_BASE_URL = "";
 
 export class ApiError extends Error {
   code: string;
