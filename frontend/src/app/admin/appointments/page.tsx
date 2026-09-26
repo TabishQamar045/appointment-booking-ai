@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BookingForm } from "@/components/appointments/booking-form";
 import { api, ApiError } from "@/lib/api";
 import type { Appointment, Customer } from "@/lib/types";
@@ -21,6 +23,8 @@ export default function AdminAppointmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -51,14 +55,11 @@ export default function AdminAppointmentsPage() {
     }
   }
 
-  function handleCancel(appt: Appointment) {
-    const reason = window.prompt(
-      `Reason for cancelling "${appt.service.name}" for ${appt.user?.name}? (shown to the customer)`
-    );
-    // Prompt returns null on Cancel/Esc - don't cancel the appointment if
-    // they backed out of giving a reason.
-    if (reason === null) return;
-    updateStatus(appt.id, "cancelled", reason.trim() || undefined);
+  async function confirmCancel() {
+    if (!cancelTarget) return;
+    await updateStatus(cancelTarget.id, "cancelled", cancelReason.trim() || undefined);
+    setCancelTarget(null);
+    setCancelReason("");
   }
 
   return (
@@ -140,7 +141,7 @@ export default function AdminAppointmentsPage() {
                       size="sm"
                       variant="outline"
                       disabled={updatingId === appt.id}
-                      onClick={() => handleCancel(appt)}
+                      onClick={() => setCancelTarget(appt)}
                     >
                       Cancel
                     </Button>
@@ -149,6 +150,53 @@ export default function AdminAppointmentsPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setCancelTarget(null)}
+        >
+          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle className="text-base">Cancel appointment</CardTitle>
+              <CardDescription>
+                {cancelTarget.service.name} for {cancelTarget.user?.name} - this reason is shown
+                to the customer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Label htmlFor="cancel-reason">Reason (optional)</Label>
+              <Textarea
+                id="cancel-reason"
+                autoFocus
+                rows={3}
+                placeholder="e.g. Stylist called in sick"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+              />
+            </CardContent>
+            <CardContent className="flex gap-2 pt-0">
+              <Button
+                variant="destructive"
+                disabled={updatingId === cancelTarget.id}
+                onClick={confirmCancel}
+              >
+                {updatingId === cancelTarget.id ? "Cancelling..." : "Confirm cancellation"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setCancelTarget(null);
+                  setCancelReason("");
+                }}
+              >
+                Back
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
