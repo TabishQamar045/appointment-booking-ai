@@ -6,6 +6,7 @@ import * as servicesService from "../services/services.service";
 import { extractBookingInfo, type BookingExtraction } from "../services/ai.service";
 import { notifyAdminsOfNewBooking } from "../services/notifications.service";
 import { AppError } from "../lib/AppError";
+import { formatWhen } from "../lib/formatWhen";
 
 export async function createSession(req: Request, res: Response) {
   if (!req.user) throw AppError.unauthorized();
@@ -46,6 +47,13 @@ export async function postMessage(req: Request, res: Response) {
     catalog.map((s) => s.name)
   );
 
+  // The AI has no database access and must never invent an answer here - it
+  // only recognizes that this is what's being asked. The real answer comes
+  // from the same appointments table the dashboard reads, not the model.
+  if (extraction.intent === "check_appointments") {
+    extraction.assistantReply = await describeAppointments(req.user.id);
+  }
+
   const assistantMessage = await chatService.saveMessage(
     sessionId,
     "assistant",
@@ -75,6 +83,24 @@ export async function postMessage(req: Request, res: Response) {
     },
     appointment: createdAppointment,
   });
+}
+
+// Answers "do I have a booking?" from the same appointments table the
+// dashboard reads - deterministic, no AI involved, so it can't hallucinate a
+// booking or ask the user for identifying info they've already given us by
+// being logged in.
+async function describeAppointments(userId: string): Promise<string> {
+  const appointments = await appointmentsService.listAppointments(userId);
+  const active = appointments.filter((a) => a.status !== "cancelled");
+
+  if (active.length === 0) {
+    return "You don't have any appointments booked with us right now. Want to book one?";
+  }
+
+  const lines = active.map(
+    (a) => `- ${a.service.name} on ${formatWhen(a.scheduledAt)} (${a.status})`
+  );
+  return `Here's what I have on file for you:\n${lines.join("\n")}`;
 }
 
 // Turns a complete extraction into a real appointment. Kept separate from

@@ -98,7 +98,7 @@ export interface ChatMessage {
 }
 
 export interface BookingExtractionSummary {
-  intent: "book_appointment" | "cancel_appointment" | "general_inquiry" | "unclear";
+  intent: "book_appointment" | "cancel_appointment" | "check_appointments" | "general_inquiry" | "unclear";
   service: string | null;
   date: string | null;
   time: string | null;

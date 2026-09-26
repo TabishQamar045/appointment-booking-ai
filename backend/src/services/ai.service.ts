@@ -17,7 +17,7 @@ export interface ChatHistoryMessage {
 // handling there). Keeping that decision out of this module is what the
 // assessment brief calls out explicitly.
 export interface BookingExtraction {
-  intent: "book_appointment" | "cancel_appointment" | "general_inquiry" | "unclear";
+  intent: "book_appointment" | "cancel_appointment" | "check_appointments" | "general_inquiry" | "unclear";
   service: string | null;
   date: string | null; // ISO date, e.g. "2026-10-05"
   time: string | null; // 24h "HH:mm", e.g. "14:30"
@@ -28,7 +28,7 @@ export interface BookingExtraction {
 function buildSystemPrompt(serviceNames: string[]): string {
   return `You are a booking assistant for Glow Studio, a hair and beauty salon.
 
-Your only job is to read the conversation and extract structured booking intent from it. You do not book anything yourself - you only extract information and draft a short, friendly reply.
+Your only job is to read the conversation and extract structured booking intent from it. You do not book anything yourself, and you have no access to the salon's database - you only extract information and draft a short, friendly reply.
 
 Valid services (the "service" field must be one of these exactly, or null): ${serviceNames.join(", ")}.
 
@@ -36,7 +36,7 @@ Today's date is ${new Date().toISOString().slice(0, 10)}. Resolve relative dates
 
 Always respond with ONLY a JSON object matching exactly this shape, no prose outside the JSON:
 {
-  "intent": "book_appointment" | "cancel_appointment" | "general_inquiry" | "unclear",
+  "intent": "book_appointment" | "cancel_appointment" | "check_appointments" | "general_inquiry" | "unclear",
   "service": string | null,
   "date": string | null,
   "time": string | null,
@@ -47,8 +47,10 @@ Always respond with ONLY a JSON object matching exactly this shape, no prose out
 Rules:
 - "isComplete" is true only when intent is "book_appointment" AND service, date, and time are all known and unambiguous.
 - If information is missing, set isComplete to false and use "assistantReply" to ask a short, specific question for exactly what's missing.
+- Use "check_appointments" whenever the user asks whether they have an appointment, what their bookings are, or similar - NEVER ask them for their name, phone number, or any identifying info to look this up. The user is already logged in and identified; the app looks their real bookings up itself and will replace "assistantReply" with the real answer, so just set the intent and leave "assistantReply" as something like "Let me check that for you."
 - "assistantReply" is what gets shown to the user in the chat - keep it conversational and brief (1-3 sentences).
-- Never invent a date, time, or service that the user didn't state or clearly imply.`;
+- Never invent a date, time, or service that the user didn't state or clearly imply.
+- Never claim to have looked up, confirmed, or found real booking data yourself - you don't have database access.`;
 }
 
 interface GroqResponse {
@@ -117,9 +119,9 @@ function parseExtraction(raw: string): BookingExtraction {
   }
 
   const p = parsed as Record<string, unknown>;
-  const intent = (["book_appointment", "cancel_appointment", "general_inquiry", "unclear"] as const).includes(
-    p.intent as BookingExtraction["intent"]
-  )
+  const intent = (
+    ["book_appointment", "cancel_appointment", "check_appointments", "general_inquiry", "unclear"] as const
+  ).includes(p.intent as BookingExtraction["intent"])
     ? (p.intent as BookingExtraction["intent"])
     : "unclear";
 

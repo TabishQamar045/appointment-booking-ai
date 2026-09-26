@@ -1,17 +1,8 @@
 import { prisma } from "../lib/prisma";
+import { formatWhen } from "../lib/formatWhen";
 import type { Appointment, Service, User } from "@prisma/client";
 
 type BookedAppointment = Appointment & { service: Service; user: Pick<User, "id" | "name" | "email"> };
-
-function formatWhen(scheduledAt: Date) {
-  // UTC-literal, matching the salon-wall-clock convention used everywhere
-  // else (availability.service.ts, the frontend's appointment list).
-  return scheduledAt.toLocaleString("en-US", {
-    timeZone: "UTC",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
 
 // Fans out to every admin - there's currently only ever one seeded, but
 // nothing stops a second from existing.
