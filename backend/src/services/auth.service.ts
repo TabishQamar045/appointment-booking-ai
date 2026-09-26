@@ -37,8 +37,8 @@ export async function login(input: LoginInput) {
   return toPublicUser(user);
 }
 
-export function issueToken(user: { id: string; email: string }): string {
-  return jwt.sign({ sub: user.id, email: user.email }, env.jwtSecret, {
+export function issueToken(user: { id: string; email: string; role: string }): string {
+  return jwt.sign({ sub: user.id, email: user.email, role: user.role }, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn,
   } as jwt.SignOptions);
 }
@@ -51,6 +51,12 @@ export async function getUserById(id: string) {
   return toPublicUser(user);
 }
 
-function toPublicUser(user: { id: string; email: string; name: string; createdAt: Date }) {
-  return { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt };
+function toPublicUser(user: {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: Date;
+}) {
+  return { id: user.id, email: user.email, name: user.name, role: user.role, createdAt: user.createdAt };
 }

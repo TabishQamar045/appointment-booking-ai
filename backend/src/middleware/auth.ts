@@ -8,6 +8,7 @@ export const AUTH_COOKIE_NAME = "auth_token";
 interface JwtPayload {
   sub: string;
   email: string;
+  role: "customer" | "admin";
 }
 
 // Verifies the httpOnly auth cookie and attaches `req.user`. Any route
@@ -20,9 +21,18 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 
   try {
     const payload = jwt.verify(token, env.jwtSecret) as JwtPayload;
-    req.user = { id: payload.sub, email: payload.email };
+    req.user = { id: payload.sub, email: payload.email, role: payload.role };
     next();
   } catch {
     throw AppError.unauthorized("Invalid or expired session");
   }
+}
+
+// Must run after requireAuth. Kept separate rather than folded into
+// requireAuth so public-but-authenticated routes don't pay an admin check.
+export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (req.user?.role !== "admin") {
+    throw AppError.forbidden("Admin access required");
+  }
+  next();
 }

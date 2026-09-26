@@ -2,9 +2,9 @@ import type { Request, Response } from "express";
 import type { Prisma } from "@prisma/client";
 import * as chatService from "../services/chat.service";
 import * as appointmentsService from "../services/appointments.service";
+import * as servicesService from "../services/services.service";
 import { extractBookingInfo, type BookingExtraction } from "../services/ai.service";
 import { AppError } from "../lib/AppError";
-import { SERVICE_OPTIONS } from "../schemas/appointment.schema";
 
 export async function createSession(req: Request, res: Response) {
   if (!req.user) throw AppError.unauthorized();
@@ -37,10 +37,12 @@ export async function postMessage(req: Request, res: Response) {
   const { content } = req.body as { content: string };
   const userMessage = await chatService.saveMessage(sessionId, "user", content);
 
+  const catalog = await servicesService.listActiveServices();
   const history = await chatService.listMessages(sessionId);
   const extraction = await extractBookingInfo(
     history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
-    content
+    content,
+    catalog.map((s) => s.name)
   );
 
   const assistantMessage = await chatService.saveMessage(
@@ -57,7 +59,7 @@ export async function postMessage(req: Request, res: Response) {
 
   let createdAppointment = null;
   if (extraction.intent === "book_appointment" && extraction.isComplete) {
-    createdAppointment = await tryAutoBook(req.user.id, extraction);
+    createdAppointment = await tryAutoBook(req.user.id, extraction, catalog);
   }
 
   res.status(200).json({
@@ -76,21 +78,39 @@ export async function postMessage(req: Request, res: Response) {
 
 // Turns a complete extraction into a real appointment. Kept separate from
 // the AI module itself - the AI never touches the database.
-async function tryAutoBook(userId: string, extraction: BookingExtraction) {
+async function tryAutoBook(
+  userId: string,
+  extraction: BookingExtraction,
+  catalog: Array<{ id: string; name: string }>
+) {
   if (!extraction.service || !extraction.date || !extraction.time) return null;
-  if (!SERVICE_OPTIONS.includes(extraction.service as (typeof SERVICE_OPTIONS)[number])) {
-    // Model returned a service name outside our fixed list - don't silently
+
+  const service = catalog.find((s) => s.name.toLowerCase() === extraction.service!.toLowerCase());
+  if (!service) {
+    // Model returned a service name outside our catalog - don't silently
     // book something invalid; the frontend's fallback form is the recovery
     // path (user picks a real option from the dropdown instead).
     return null;
   }
 
-  const scheduledAt = new Date(`${extraction.date}T${extraction.time}:00`);
+  // UTC-literal construction, matching availability.service.ts's convention:
+  // date/time are a fixed "salon wall clock" with no real timezone, so both
+  // sides must build/read the same way or the AI's booked time could drift
+  // from what was actually checked as available.
+  const scheduledAt = new Date(`${extraction.date}T${extraction.time}:00.000Z`);
   if (Number.isNaN(scheduledAt.getTime())) return null;
 
-  return appointmentsService.createAppointment(userId, {
-    serviceName: extraction.service as (typeof SERVICE_OPTIONS)[number],
-    scheduledAt: scheduledAt.toISOString(),
-    notes: "Booked via AI chat assistant",
-  });
+  try {
+    return await appointmentsService.createAppointment(userId, {
+      serviceId: service.id,
+      scheduledAt: scheduledAt.toISOString(),
+      notes: "Booked via AI chat assistant",
+    });
+  } catch (err) {
+    // Slot got taken between extraction and booking (or any other
+    // create-time validation failure) - fail soft, let the fallback form
+    // recover rather than surfacing a raw 409/500 from inside a chat reply.
+    if (err instanceof AppError) return null;
+    throw err;
+  }
 }

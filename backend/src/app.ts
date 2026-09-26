@@ -8,6 +8,9 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth.routes";
 import appointmentRoutes from "./routes/appointments.routes";
 import chatRoutes from "./routes/chat.routes";
+import servicesRoutes from "./routes/services.routes";
+import availabilityRoutes from "./routes/availability.routes";
+import adminRoutes from "./routes/admin.routes";
 
 export function createApp() {
   const app = express();
@@ -23,6 +26,9 @@ export function createApp() {
   app.use("/auth", authRoutes);
   app.use("/appointments", appointmentRoutes);
   app.use("/chat", chatRoutes);
+  app.use("/services", servicesRoutes);
+  app.use("/availability", availabilityRoutes);
+  app.use("/admin", adminRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

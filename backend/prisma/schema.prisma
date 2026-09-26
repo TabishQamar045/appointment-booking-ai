@@ -1,7 +1,8 @@
-// Prisma schema for the appointment-booking assessment app.
+// Prisma schema for Glow Studio - a single hair/beauty salon.
 //
-// Assumption: one physical calendar / one set of "services" shared by every
-// user (no multi-tenancy / business_id, per the assessment's cut scope).
+// Assumption: one physical location, one shared calendar (no multi-tenancy,
+// no multi-stylist resource scheduling) - every appointment blocks the same
+// salon-wide timeline.
 
 generator client {
   provider = "prisma-client-js"
@@ -23,11 +24,26 @@ enum ChatRole {
   assistant
 }
 
+enum UserRole {
+  customer
+  admin
+}
+
+enum ServiceCategory {
+  hair
+  skin
+  nails
+  body_spa
+  makeup
+  grooming
+}
+
 model User {
   id           String        @id @default(uuid())
   email        String        @unique
   passwordHash String        @map("password_hash")
   name         String
+  role         UserRole      @default(customer)
   createdAt    DateTime      @default(now()) @map("created_at")
 
   appointments Appointment[]
@@ -36,18 +52,48 @@ model User {
   @@map("users")
 }
 
+model Service {
+  id              String          @id @default(uuid())
+  name            String          @unique
+  category        ServiceCategory
+  description     String?
+  durationMinutes Int             @map("duration_minutes")
+  price           Float
+  isActive        Boolean         @default(true) @map("is_active")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  appointments Appointment[]
+
+  @@index([category])
+  @@map("services")
+}
+
+// One row per weekday (0 = Sunday ... 6 = Saturday). Flat weekly schedule,
+// no special-date/holiday overrides.
+model BusinessHours {
+  id        String  @id @default(uuid())
+  dayOfWeek Int     @unique @map("day_of_week")
+  openTime  String  @map("open_time") // "HH:mm"
+  closeTime String  @map("close_time") // "HH:mm"
+  isClosed  Boolean @default(false) @map("is_closed")
+
+  @@map("business_hours")
+}
+
 model Appointment {
   id          String            @id @default(uuid())
   userId      String            @map("user_id")
-  serviceName String            @map("service_name")
+  serviceId   String            @map("service_id")
   scheduledAt DateTime          @map("scheduled_at")
   status      AppointmentStatus @default(pending)
   notes       String?
   createdAt   DateTime          @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   @@index([userId, scheduledAt])
+  @@index([scheduledAt])
   @@map("appointments")
 }
 

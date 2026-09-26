@@ -1,6 +1,5 @@
 import { env } from "../config/env";
 import { AppError } from "../lib/AppError";
-import { SERVICE_OPTIONS } from "../schemas/appointment.schema";
 
 const MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions";
 
@@ -23,11 +22,12 @@ export interface BookingExtraction {
   assistantReply: string;
 }
 
-const SYSTEM_PROMPT = `You are a booking assistant for an appointment-scheduling app.
+function buildSystemPrompt(serviceNames: string[]): string {
+  return `You are a booking assistant for Glow Studio, a hair and beauty salon.
 
 Your only job is to read the conversation and extract structured booking intent from it. You do not book anything yourself - you only extract information and draft a short, friendly reply.
 
-Valid services (the "service" field must be one of these exactly, or null): ${SERVICE_OPTIONS.join(", ")}.
+Valid services (the "service" field must be one of these exactly, or null): ${serviceNames.join(", ")}.
 
 Today's date is ${new Date().toISOString().slice(0, 10)}. Resolve relative dates ("tomorrow", "next Monday") into an absolute ISO date (YYYY-MM-DD) using this.
 
@@ -46,6 +46,7 @@ Rules:
 - If information is missing, set isComplete to false and use "assistantReply" to ask a short, specific question for exactly what's missing.
 - "assistantReply" is what gets shown to the user in the chat - keep it conversational and brief (1-3 sentences).
 - Never invent a date, time, or service that the user didn't state or clearly imply.`;
+}
 
 interface MistralResponse {
   choices: Array<{ message: { content: string } }>;
@@ -53,7 +54,8 @@ interface MistralResponse {
 
 export async function extractBookingInfo(
   history: ChatHistoryMessage[],
-  latestUserMessage: string
+  latestUserMessage: string,
+  serviceNames: string[]
 ): Promise<BookingExtraction> {
   if (!env.mistralApiKey) {
     throw AppError.badRequest(
@@ -63,7 +65,7 @@ export async function extractBookingInfo(
   }
 
   const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT },
+    { role: "system" as const, content: buildSystemPrompt(serviceNames) },
     ...history.slice(-10),
     { role: "user" as const, content: latestUserMessage },
   ];
