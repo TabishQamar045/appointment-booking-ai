@@ -1,7 +1,10 @@
 import { env } from "../config/env";
 import { AppError } from "../lib/AppError";
 
-const MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions";
+// Groq's API is OpenAI-compatible, which is why this module barely changed
+// when we swapped providers (see git history - it was Mistral originally).
+// Free tier, no card required, and noticeably more reliable in practice.
+const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export interface ChatHistoryMessage {
   role: "user" | "assistant";
@@ -48,7 +51,7 @@ Rules:
 - Never invent a date, time, or service that the user didn't state or clearly imply.`;
 }
 
-interface MistralResponse {
+interface GroqResponse {
   choices: Array<{ message: { content: string } }>;
 }
 
@@ -57,9 +60,9 @@ export async function extractBookingInfo(
   latestUserMessage: string,
   serviceNames: string[]
 ): Promise<BookingExtraction> {
-  if (!env.mistralApiKey) {
+  if (!env.groqApiKey) {
     throw AppError.badRequest(
-      "AI assistant is not configured (missing MISTRAL_API_KEY on the server)",
+      "AI assistant is not configured (missing GROQ_API_KEY on the server)",
       "AI_NOT_CONFIGURED"
     );
   }
@@ -70,16 +73,16 @@ export async function extractBookingInfo(
     { role: "user" as const, content: latestUserMessage },
   ];
 
-  console.log("[ai] request", { model: env.mistralModel, messageCount: messages.length });
+  console.log("[ai] request", { model: env.groqModel, messageCount: messages.length });
 
-  const response = await fetch(MISTRAL_CHAT_URL, {
+  const response = await fetch(GROQ_CHAT_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.mistralApiKey}`,
+      Authorization: `Bearer ${env.groqApiKey}`,
     },
     body: JSON.stringify({
-      model: env.mistralModel,
+      model: env.groqModel,
       messages,
       response_format: { type: "json_object" },
       temperature: 0.2,
@@ -88,11 +91,11 @@ export async function extractBookingInfo(
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
-    console.error("[ai] mistral error", response.status, errorBody);
+    console.error("[ai] groq error", response.status, errorBody);
     throw new AppError("The AI assistant is temporarily unavailable", 502, "AI_UPSTREAM_ERROR");
   }
 
-  const data = (await response.json()) as MistralResponse;
+  const data = (await response.json()) as GroqResponse;
   const raw = data.choices?.[0]?.message?.content ?? "{}";
 
   console.log("[ai] response", raw);

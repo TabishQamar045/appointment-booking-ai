@@ -14,8 +14,8 @@ export const env = {
   databaseUrl: required("DATABASE_URL"),
   jwtSecret: required("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
-  mistralApiKey: process.env.MISTRAL_API_KEY ?? "",
-  mistralModel: process.env.MISTRAL_MODEL ?? "mistral-small-latest",
+  groqApiKey: process.env.GROQ_API_KEY ?? "",
+  groqModel: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? "http://localhost:3000",
 };
 
