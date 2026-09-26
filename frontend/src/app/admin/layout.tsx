@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
+  { href: "/admin/appointments", label: "Appointments" },
+  { href: "/admin/customers", label: "Customers" },
   { href: "/admin/services", label: "Services" },
   { href: "/admin/hours", label: "Business Hours" },
 ];

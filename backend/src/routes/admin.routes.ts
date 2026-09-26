@@ -1,10 +1,16 @@
 import { Router } from "express";
 import * as servicesController from "../controllers/services.controller";
 import * as businessHoursController from "../controllers/businessHours.controller";
+import * as appointmentsController from "../controllers/appointments.controller";
+import * as customersController from "../controllers/customers.controller";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { createServiceSchema, updateServiceSchema } from "../schemas/service.schema";
 import { updateBusinessHoursSchema } from "../schemas/businessHours.schema";
+import {
+  adminCreateAppointmentSchema,
+  listAppointmentsQuerySchema,
+} from "../schemas/appointment.schema";
 import { asyncHandler } from "../lib/asyncHandler";
 
 const router = Router();
@@ -25,5 +31,18 @@ router.put(
   validate(updateBusinessHoursSchema),
   asyncHandler(businessHoursController.update)
 );
+
+router.get(
+  "/appointments",
+  validate(listAppointmentsQuerySchema, "query"),
+  asyncHandler(appointmentsController.adminList)
+);
+router.post(
+  "/appointments",
+  validate(adminCreateAppointmentSchema),
+  asyncHandler(appointmentsController.adminCreate)
+);
+
+router.get("/customers", asyncHandler(customersController.list));
 
 export default router;

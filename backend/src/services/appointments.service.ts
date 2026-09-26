@@ -12,7 +12,24 @@ export async function listAppointments(userId: string, status?: AppointmentStatu
   });
 }
 
+// Admin view across all customers - same shape plus who booked it.
+export async function listAllAppointments(status?: AppointmentStatus) {
+  return prisma.appointment.findMany({
+    where: status ? { status } : {},
+    include: { service: true, user: { select: { id: true, name: true, email: true } } },
+    orderBy: { scheduledAt: "asc" },
+  });
+}
+
 export async function createAppointment(userId: string, input: CreateAppointmentInput) {
+  // Cheap existence check - always true for the self-serve path (userId
+  // comes from the JWT), but an admin booking on a customer's behalf can
+  // pass any uuid, so this is the one place that guards both.
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw AppError.notFound("Customer not found", "USER_NOT_FOUND");
+  }
+
   const service = await prisma.service.findUnique({ where: { id: input.serviceId } });
   if (!service || !service.isActive) {
     throw AppError.notFound("Service not found", "SERVICE_NOT_FOUND");

@@ -20,6 +20,7 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   type Appointment,
+  type Customer,
   type Service,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -36,11 +37,15 @@ interface BookingFormProps {
   initialTime?: string | null; // "HH:mm" - preselected only if still open
   onCreated?: (appointment: Appointment) => void;
   onCancel?: () => void;
+  // Admin booking on a customer's behalf: adds a customer picker and posts
+  // to /admin/appointments (with userId) instead of /appointments (self).
+  customers?: Customer[];
 }
 
-// Reused in two places: the "book directly" panel on the dashboard, and the
+// Reused in three places: the "book directly" panel on the dashboard, the
 // AI chat's fallback form when the assistant can't fully resolve booking
-// details on its own (see chat/page.tsx).
+// details on its own (see chat/page.tsx), and the admin "new booking" form
+// (with `customers` passed, for booking on a customer's behalf).
 export function BookingForm({
   title = "Book an appointment",
   description,
@@ -50,7 +55,10 @@ export function BookingForm({
   initialTime,
   onCreated,
   onCancel,
+  customers,
 }: BookingFormProps) {
+  const isAdmin = customers !== undefined;
+  const [customerId, setCustomerId] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState<string>(initialServiceId ?? "");
   const [date, setDate] = useState(initialDate ?? "");
@@ -127,6 +135,10 @@ export function BookingForm({
       setError("Please choose a service, date, and time.");
       return;
     }
+    if (isAdmin && !customerId) {
+      setError("Please choose a customer.");
+      return;
+    }
 
     // UTC-literal, matching the backend's availability math: date/time are a
     // fixed salon wall-clock with no real timezone conversion (see
@@ -139,12 +151,17 @@ export function BookingForm({
 
     setIsSubmitting(true);
     try {
-      const res = await api.post<{ appointment: Appointment }>("/appointments", {
-        serviceId,
-        scheduledAt: scheduledAt.toISOString(),
-        notes: notes.trim() || undefined,
-      });
+      const res = await api.post<{ appointment: Appointment }>(
+        isAdmin ? "/admin/appointments" : "/appointments",
+        {
+          ...(isAdmin ? { userId: customerId } : {}),
+          serviceId,
+          scheduledAt: scheduledAt.toISOString(),
+          notes: notes.trim() || undefined,
+        }
+      );
       onCreated?.(res.appointment);
+      setCustomerId("");
       setServiceId("");
       setDate("");
       setTime("");
@@ -164,6 +181,28 @@ export function BookingForm({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="flex flex-col gap-4">
+          {isAdmin && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="customer">Customer</Label>
+              <Select value={customerId} onValueChange={(value) => setCustomerId(value ?? "")}>
+                <SelectTrigger id="customer" className="w-full">
+                  <SelectValue placeholder="Choose a customer">
+                    {() => {
+                      const selected = customers?.find((c) => c.id === customerId);
+                      return selected ? `${selected.name} (${selected.email})` : "Choose a customer";
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {customers?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} ({c.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="service">Service</Label>
             <Select value={serviceId} onValueChange={(value) => setServiceId(value ?? "")}>
@@ -253,7 +292,7 @@ export function BookingForm({
         <CardContent className="flex gap-2 pt-0">
           <Button
             type="submit"
-            disabled={isSubmitting || !time}
+            disabled={isSubmitting || !time || (isAdmin && !customerId)}
             className="gradient-bg text-primary-foreground"
           >
             {isSubmitting ? "Booking..." : "Book appointment"}

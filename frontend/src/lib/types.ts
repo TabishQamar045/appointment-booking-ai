@@ -54,6 +54,17 @@ export interface Appointment {
   status: AppointmentStatus;
   notes: string | null;
   createdAt: string;
+  // Only present on the admin "all appointments" listing.
+  user?: Pick<User, "id" | "name" | "email">;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  provider: "local" | "google" | "facebook";
+  createdAt: string;
+  _count: { appointments: number };
 }
 
 export interface ChatSession {

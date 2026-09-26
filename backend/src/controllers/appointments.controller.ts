@@ -14,3 +14,15 @@ export async function create(req: Request, res: Response) {
   const appointment = await appointmentsService.createAppointment(req.user.id, req.body);
   res.status(201).json({ appointment });
 }
+
+export async function adminList(req: Request, res: Response) {
+  const { status } = req.query as { status?: "pending" | "confirmed" | "cancelled" };
+  const appointments = await appointmentsService.listAllAppointments(status);
+  res.status(200).json({ appointments });
+}
+
+export async function adminCreate(req: Request, res: Response) {
+  const { userId, ...input } = req.body;
+  const appointment = await appointmentsService.createAppointment(userId, input);
+  res.status(201).json({ appointment });
+}
