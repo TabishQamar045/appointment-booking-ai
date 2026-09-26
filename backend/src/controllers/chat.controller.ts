@@ -4,6 +4,7 @@ import * as chatService from "../services/chat.service";
 import * as appointmentsService from "../services/appointments.service";
 import * as servicesService from "../services/services.service";
 import { extractBookingInfo, type BookingExtraction } from "../services/ai.service";
+import { notifyAdminsOfNewBooking } from "../services/notifications.service";
 import { AppError } from "../lib/AppError";
 
 export async function createSession(req: Request, res: Response) {
@@ -101,11 +102,13 @@ async function tryAutoBook(
   if (Number.isNaN(scheduledAt.getTime())) return null;
 
   try {
-    return await appointmentsService.createAppointment(userId, {
+    const appointment = await appointmentsService.createAppointment(userId, {
       serviceId: service.id,
       scheduledAt: scheduledAt.toISOString(),
       notes: "Booked via AI chat assistant",
     });
+    await notifyAdminsOfNewBooking(appointment);
+    return appointment;
   } catch (err) {
     // Slot got taken between extraction and booking (or any other
     // create-time validation failure) - fail soft, let the fallback form

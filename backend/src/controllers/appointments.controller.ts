@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as appointmentsService from "../services/appointments.service";
+import { notifyAdminsOfNewBooking, notifyCustomerOfStatusChange } from "../services/notifications.service";
 import { AppError } from "../lib/AppError";
 
 export async function list(req: Request, res: Response) {
@@ -12,6 +13,7 @@ export async function list(req: Request, res: Response) {
 export async function create(req: Request, res: Response) {
   if (!req.user) throw AppError.unauthorized();
   const appointment = await appointmentsService.createAppointment(req.user.id, req.body);
+  await notifyAdminsOfNewBooking(appointment);
   res.status(201).json({ appointment });
 }
 
@@ -28,9 +30,10 @@ export async function adminCreate(req: Request, res: Response) {
 }
 
 export async function adminUpdateStatus(req: Request, res: Response) {
-  const appointment = await appointmentsService.updateAppointmentStatus(
-    req.params.id,
-    req.body.status
-  );
+  const { status, reason } = req.body as { status: "pending" | "confirmed" | "cancelled"; reason?: string };
+  const appointment = await appointmentsService.updateAppointmentStatus(req.params.id, status, reason);
+  if (status === "confirmed" || status === "cancelled") {
+    await notifyCustomerOfStatusChange(appointment, status, reason);
+  }
   res.status(200).json({ appointment });
 }

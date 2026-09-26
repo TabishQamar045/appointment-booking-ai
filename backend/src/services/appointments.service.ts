@@ -4,14 +4,20 @@ import { assertSlotAvailable } from "./availability.service";
 import type { CreateAppointmentInput } from "../schemas/appointment.schema";
 import type { AppointmentStatus } from "@prisma/client";
 
-export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
+export async function updateAppointmentStatus(
+  id: string,
+  status: AppointmentStatus,
+  reason?: string
+) {
   const appointment = await prisma.appointment.findUnique({ where: { id } });
   if (!appointment) {
     throw AppError.notFound("Appointment not found", "APPOINTMENT_NOT_FOUND");
   }
   return prisma.appointment.update({
     where: { id },
-    data: { status },
+    // Reason only ever sticks for a cancellation - reconfirming (or
+    // resetting to pending) clears any stale reason from a prior cancel.
+    data: { status, cancellationReason: status === "cancelled" ? (reason ?? null) : null },
     include: { service: true, user: { select: { id: true, name: true, email: true } } },
   });
 }
@@ -56,11 +62,10 @@ export async function createAppointment(userId: string, input: CreateAppointment
       serviceId: input.serviceId,
       scheduledAt,
       notes: input.notes,
-      // Assumption: bookings start as "pending" and would be confirmed by
-      // staff/an admin flow in a real product - out of scope here, so
-      // there's no confirm/cancel endpoint, just the status field on the model.
+      // Starts pending - an admin confirms or cancels it via
+      // updateAppointmentStatus above.
       status: "pending",
     },
-    include: { service: true },
+    include: { service: true, user: { select: { id: true, name: true, email: true } } },
   });
 }

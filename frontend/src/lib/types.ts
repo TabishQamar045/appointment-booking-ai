@@ -53,9 +53,22 @@ export interface Appointment {
   scheduledAt: string;
   status: AppointmentStatus;
   notes: string | null;
+  // Only set when an admin cancels with a reason.
+  cancellationReason: string | null;
   createdAt: string;
   // Only present on the admin "all appointments" listing.
   user?: Pick<User, "id" | "name" | "email">;
+}
+
+export type NotificationType = "booking_requested" | "booking_confirmed" | "booking_cancelled";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  appointmentId: string | null;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface Customer {

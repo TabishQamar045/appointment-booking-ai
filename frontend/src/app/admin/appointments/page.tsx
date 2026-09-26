@@ -35,11 +35,12 @@ export default function AdminAppointmentsPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  async function updateStatus(id: string, status: Appointment["status"]) {
+  async function updateStatus(id: string, status: Appointment["status"], reason?: string) {
     setUpdatingId(id);
     try {
       const res = await api.patch<{ appointment: Appointment }>(`/admin/appointments/${id}`, {
         status,
+        reason,
       });
       setAppointments((prev) => prev.map((a) => (a.id === id ? res.appointment : a)));
       toast.success(status === "confirmed" ? "Appointment confirmed" : "Appointment cancelled");
@@ -48,6 +49,16 @@ export default function AdminAppointmentsPage() {
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  function handleCancel(appt: Appointment) {
+    const reason = window.prompt(
+      `Reason for cancelling "${appt.service.name}" for ${appt.user?.name}? (shown to the customer)`
+    );
+    // Prompt returns null on Cancel/Esc - don't cancel the appointment if
+    // they backed out of giving a reason.
+    if (reason === null) return;
+    updateStatus(appt.id, "cancelled", reason.trim() || undefined);
   }
 
   return (
@@ -107,6 +118,11 @@ export default function AdminAppointmentsPage() {
                       timeStyle: "short",
                     })}
                   </p>
+                  {appt.status === "cancelled" && appt.cancellationReason && (
+                    <p className="mt-1 text-sm text-destructive">
+                      Reason: {appt.cancellationReason}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   {appt.status === "pending" && (
@@ -124,7 +140,7 @@ export default function AdminAppointmentsPage() {
                       size="sm"
                       variant="outline"
                       disabled={updatingId === appt.id}
-                      onClick={() => updateStatus(appt.id, "cancelled")}
+                      onClick={() => handleCancel(appt)}
                     >
                       Cancel
                     </Button>

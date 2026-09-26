@@ -44,6 +44,12 @@ enum ServiceCategory {
   grooming
 }
 
+enum NotificationType {
+  booking_requested
+  booking_confirmed
+  booking_cancelled
+}
+
 model User {
   id           String        @id @default(uuid())
   email        String        @unique
@@ -55,8 +61,9 @@ model User {
   providerId   String?       @map("provider_id")
   createdAt    DateTime      @default(now()) @map("created_at")
 
-  appointments Appointment[]
-  chatSessions ChatSession[]
+  appointments  Appointment[]
+  chatSessions  ChatSession[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -96,10 +103,14 @@ model Appointment {
   scheduledAt DateTime          @map("scheduled_at")
   status      AppointmentStatus @default(pending)
   notes       String?
+  // Only ever set when an admin cancels - shown back to the customer so
+  // "why was my booking cancelled" has an answer.
+  cancellationReason String?    @map("cancellation_reason")
   createdAt   DateTime          @default(now()) @map("created_at")
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  notifications Notification[]
 
   @@index([userId, scheduledAt])
   @@index([scheduledAt])
@@ -132,4 +143,22 @@ model ChatMessage {
 
   @@index([sessionId])
   @@map("chat_messages")
+}
+
+// One row per recipient per event - a new booking fans out to every admin
+// as a separate row, rather than one shared row with read-state per user.
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  type          NotificationType
+  message       String
+  appointmentId String?          @map("appointment_id")
+  isRead        Boolean          @default(false) @map("is_read")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+  @@map("notifications")
 }

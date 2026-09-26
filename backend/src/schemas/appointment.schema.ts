@@ -17,6 +17,8 @@ export const adminCreateAppointmentSchema = createAppointmentSchema.extend({
 
 export const updateAppointmentStatusSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled"]),
+  // Only meaningful when cancelling - shown back to the customer.
+  reason: z.string().max(500).optional(),
 });
 
 export const availabilityQuerySchema = z.object({

@@ -11,6 +11,7 @@ import chatRoutes from "./routes/chat.routes";
 import servicesRoutes from "./routes/services.routes";
 import availabilityRoutes from "./routes/availability.routes";
 import adminRoutes from "./routes/admin.routes";
+import notificationsRoutes from "./routes/notifications.routes";
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
   app.use("/services", servicesRoutes);
   app.use("/availability", availabilityRoutes);
   app.use("/admin", adminRoutes);
+  app.use("/notifications", notificationsRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
       { source: "/api/services", destination: `${BACKEND_URL}/services` },
       { source: "/api/availability", destination: `${BACKEND_URL}/availability` },
       { source: "/api/admin/:path*", destination: `${BACKEND_URL}/admin/:path*` },
+      { source: "/api/notifications", destination: `${BACKEND_URL}/notifications` },
+      { source: "/api/notifications/:path*", destination: `${BACKEND_URL}/notifications/:path*` },
     ];
   },
 };

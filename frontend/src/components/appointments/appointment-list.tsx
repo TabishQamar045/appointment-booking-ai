@@ -47,6 +47,11 @@ export function AppointmentList({ appointments }: { appointments: Appointment[] 
               {appt.notes && (
                 <p className="mt-1 text-xs text-muted-foreground italic">{appt.notes}</p>
               )}
+              {appt.status === "cancelled" && appt.cancellationReason && (
+                <p className="mt-1 text-xs text-destructive">
+                  Reason: {appt.cancellationReason}
+                </p>
+              )}
             </div>
             <Badge variant={STATUS_VARIANT[appt.status]} className="capitalize">
               {appt.status}

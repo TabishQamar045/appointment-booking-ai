@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -79,9 +80,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </Link>
             </nav>
           </div>
-          <Button variant="outline" size="sm" onClick={() => logout()}>
-            Log out
-          </Button>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <Button variant="outline" size="sm" onClick={() => logout()}>
+              Log out
+            </Button>
+          </div>
         </div>
       </header>
       <main className={cn("mx-auto w-full max-w-5xl flex-1 px-4 py-6")}>{children}</main>
