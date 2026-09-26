@@ -17,7 +17,13 @@ export interface ChatHistoryMessage {
 // handling there). Keeping that decision out of this module is what the
 // assessment brief calls out explicitly.
 export interface BookingExtraction {
-  intent: "book_appointment" | "cancel_appointment" | "check_appointments" | "general_inquiry" | "unclear";
+  intent:
+    | "book_appointment"
+    | "cancel_appointment"
+    | "check_appointments"
+    | "check_availability"
+    | "general_inquiry"
+    | "unclear";
   service: string | null;
   date: string | null; // ISO date, e.g. "2026-10-05"
   time: string | null; // 24h "HH:mm", e.g. "14:30"
@@ -36,7 +42,7 @@ Today's date is ${new Date().toISOString().slice(0, 10)}. Resolve relative dates
 
 Always respond with ONLY a JSON object matching exactly this shape, no prose outside the JSON:
 {
-  "intent": "book_appointment" | "cancel_appointment" | "check_appointments" | "general_inquiry" | "unclear",
+  "intent": "book_appointment" | "cancel_appointment" | "check_appointments" | "check_availability" | "general_inquiry" | "unclear",
   "service": string | null,
   "date": string | null,
   "time": string | null,
@@ -48,9 +54,10 @@ Rules:
 - "isComplete" is true only when intent is "book_appointment" AND service, date, and time are all known and unambiguous.
 - If information is missing, set isComplete to false and use "assistantReply" to ask a short, specific question for exactly what's missing.
 - Use "check_appointments" whenever the user asks whether they have an appointment, what their bookings are, or similar - NEVER ask them for their name, phone number, or any identifying info to look this up. The user is already logged in and identified; the app looks their real bookings up itself and will replace "assistantReply" with the real answer, so just set the intent and leave "assistantReply" as something like "Let me check that for you."
+- Use "check_availability" when the user asks what times/slots are open for a service, without yet committing to a specific time to book. Extract "service" and "date" if you can tell them from the message (leave "time" null). You have no real-time schedule data, so never list or invent specific open times yourself - the app replaces "assistantReply" with the real times when both service and date are known. If service or date is still missing, use "assistantReply" to ask for exactly what's missing.
 - "assistantReply" is what gets shown to the user in the chat - keep it conversational and brief (1-3 sentences).
 - Never invent a date, time, or service that the user didn't state or clearly imply.
-- Never claim to have looked up, confirmed, or found real booking data yourself - you don't have database access.`;
+- Never claim to have looked up, confirmed, or found real booking/availability data yourself, and never claim a booking succeeded - you don't have database access. The app substitutes the real outcome in both cases.`;
 }
 
 interface GroqResponse {
@@ -120,7 +127,14 @@ function parseExtraction(raw: string): BookingExtraction {
 
   const p = parsed as Record<string, unknown>;
   const intent = (
-    ["book_appointment", "cancel_appointment", "check_appointments", "general_inquiry", "unclear"] as const
+    [
+      "book_appointment",
+      "cancel_appointment",
+      "check_appointments",
+      "check_availability",
+      "general_inquiry",
+      "unclear",
+    ] as const
   ).includes(p.intent as BookingExtraction["intent"])
     ? (p.intent as BookingExtraction["intent"])
     : "unclear";

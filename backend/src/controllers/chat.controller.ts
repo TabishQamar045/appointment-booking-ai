@@ -3,10 +3,11 @@ import type { Prisma } from "@prisma/client";
 import * as chatService from "../services/chat.service";
 import * as appointmentsService from "../services/appointments.service";
 import * as servicesService from "../services/services.service";
+import { getAvailableSlots } from "../services/availability.service";
 import { extractBookingInfo, type BookingExtraction } from "../services/ai.service";
 import { notifyAdminsOfNewBooking } from "../services/notifications.service";
 import { AppError } from "../lib/AppError";
-import { formatWhen } from "../lib/formatWhen";
+import { formatWhen, formatDateOnly } from "../lib/formatWhen";
 
 export async function createSession(req: Request, res: Response) {
   if (!req.user) throw AppError.unauthorized();
@@ -47,11 +48,22 @@ export async function postMessage(req: Request, res: Response) {
     catalog.map((s) => s.name)
   );
 
-  // The AI has no database access and must never invent an answer here - it
-  // only recognizes that this is what's being asked. The real answer comes
-  // from the same appointments table the dashboard reads, not the model.
+  // For every intent below, the AI only ever recognizes WHAT is being asked -
+  // the actual answer (or action) comes from this controller reading/writing
+  // the real database, and extraction.assistantReply gets overwritten with
+  // the real outcome before it's ever saved or shown to the user. This is
+  // what stops the model from hallucinating bookings, slots, or a "done!"
+  // that didn't actually happen.
+  let createdAppointment = null;
   if (extraction.intent === "check_appointments") {
     extraction.assistantReply = await describeAppointments(req.user.id);
+  } else if (extraction.intent === "check_availability") {
+    extraction.assistantReply = await describeAvailability(extraction, catalog);
+  } else if (extraction.intent === "book_appointment" && extraction.isComplete) {
+    createdAppointment = await tryAutoBook(req.user.id, extraction, catalog);
+    extraction.assistantReply = createdAppointment
+      ? describeBookingConfirmation(createdAppointment)
+      : "I couldn't book that automatically - that time may no longer be available. Pick another time below and I'll get it booked.";
   }
 
   const assistantMessage = await chatService.saveMessage(
@@ -61,15 +73,10 @@ export async function postMessage(req: Request, res: Response) {
     extraction as unknown as Prisma.InputJsonValue
   );
 
-  // isComplete=false is the frontend's cue to render the fallback form
-  // instead of waiting on more chat turns - per spec, this decision is made
-  // here, not inside the AI module.
-  const needsForm = extraction.intent === "book_appointment" && !extraction.isComplete;
-
-  let createdAppointment = null;
-  if (extraction.intent === "book_appointment" && extraction.isComplete) {
-    createdAppointment = await tryAutoBook(req.user.id, extraction, catalog);
-  }
+  // The fallback form covers both "still missing details" and "auto-book
+  // attempted but failed" (e.g. the slot got taken) - either way, the user
+  // needs to pick a real option from the form instead of retyping in chat.
+  const needsForm = extraction.intent === "book_appointment" && !createdAppointment;
 
   res.status(200).json({
     userMessage,
@@ -101,6 +108,38 @@ async function describeAppointments(userId: string): Promise<string> {
     (a) => `- ${a.service.name} on ${formatWhen(a.scheduledAt)} (${a.status})`
   );
   return `Here's what I have on file for you:\n${lines.join("\n")}`;
+}
+
+// Answers "what times are open?" from the same availability math the
+// booking form's slot picker uses - the AI never gets to list times itself,
+// since it has no way to know what's actually still open.
+async function describeAvailability(
+  extraction: BookingExtraction,
+  catalog: Array<{ id: string; name: string }>
+): Promise<string> {
+  // Missing service or date: keep the AI's own clarifying question rather
+  // than guessing what to ask for.
+  if (!extraction.service || !extraction.date) return extraction.assistantReply;
+
+  const service = catalog.find((s) => s.name.toLowerCase() === extraction.service!.toLowerCase());
+  if (!service) {
+    return `I don't have "${extraction.service}" in our service list - could you pick from one of our actual services?`;
+  }
+
+  const slots = await getAvailableSlots(service.id, extraction.date);
+  const when = formatDateOnly(extraction.date);
+  if (slots.length === 0) {
+    return `There are no open times for ${service.name} on ${when} - want to try another date?`;
+  }
+  return `Here are the open times for ${service.name} on ${when}: ${slots.join(", ")}. Just tell me which one and I'll book it.`;
+}
+
+function describeBookingConfirmation(
+  appointment: Awaited<ReturnType<typeof appointmentsService.createAppointment>>
+): string {
+  return `Done! I've booked your ${appointment.service.name} for ${formatWhen(
+    appointment.scheduledAt
+  )}. It's ${appointment.status} until the salon confirms it.`;
 }
 
 // Turns a complete extraction into a real appointment. Kept separate from

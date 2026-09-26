@@ -9,3 +9,12 @@ export function formatWhen(scheduledAt: Date): string {
     timeStyle: "short",
   });
 }
+
+// Same convention, for a bare "YYYY-MM-DD" with no time component yet
+// (e.g. an availability lookup before a specific slot is chosen).
+export function formatDateOnly(dateStr: string): string {
+  return new Date(`${dateStr}T00:00:00.000Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    dateStyle: "medium",
+  });
+}
