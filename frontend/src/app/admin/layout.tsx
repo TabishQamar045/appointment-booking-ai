@@ -19,14 +19,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   // Defense in depth, not the security boundary - proxy.ts only checks that
-  // *some* authenticated user is present (it can't see the role, since the
-  // cookie is httpOnly). The backend's requireAdmin is what actually blocks
-  // a non-admin from doing anything here; this just bounces them out of a
-  // UI they can't use.
+  // *some* cookie is present, not that it's still valid or belongs to an
+  // admin (it can't verify the JWT without duplicating JWT_SECRET into the
+  // frontend, and the cookie is httpOnly regardless). A stale/expired
+  // cookie passes that check and lands here with user === null once
+  // /auth/me 401s. Calling logout() (not a plain redirect) clears that
+  // cookie server-side first - otherwise proxy.ts would see the still-present
+  // invalid cookie on /login and bounce straight back here, looping forever.
+  // The backend's requireAdmin is what actually blocks a non-admin from
+  // doing anything here; the role branch below is just a UI bounce.
   useEffect(() => {
-    if (!isLoading && user && user.role !== "admin") {
+    if (isLoading) return;
+    if (!user) {
+      logout();
+    } else if (user.role !== "admin") {
       router.replace("/dashboard");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, user, router]);
 
   if (isLoading || !user || user.role !== "admin") {

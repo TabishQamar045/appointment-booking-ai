@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
@@ -16,6 +17,31 @@ const NAV_LINKS = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
+
+  // proxy.ts only checks whether *a* cookie is present, not whether it's
+  // still valid (verifying the JWT there would require duplicating
+  // JWT_SECRET into the frontend). A stale/expired cookie therefore passes
+  // that check and lands here, where /auth/me's 401 sets user to null - this
+  // is what actually catches it. Calling logout() rather than a plain
+  // redirect matters: it clears the cookie server-side first, so proxy.ts
+  // doesn't see a (still-present but invalid) cookie on /login and bounce
+  // straight back here, which would otherwise loop forever.
+  useEffect(() => {
+    if (!isLoading && !user) {
+      logout();
+    }
+    // logout() is stable (useCallback with no deps that change per-render);
+    // omitting it here would re-run this on every logout() identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, user]);
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -38,7 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Button>
                 </Link>
               ))}
-              {user?.role === "admin" && (
+              {user.role === "admin" && (
                 <Link href="/admin">
                   <Button variant="ghost" size="sm" className="font-normal">
                     Admin
@@ -48,21 +74,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            {!isLoading && user && (
-              <>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback className="text-xs">
-                      {user.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground">{user.name}</span>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => logout()}>
-                  Log out
-                </Button>
-              </>
-            )}
+            <div className="flex items-center gap-2">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="text-xs">
+                  {user.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-muted-foreground">{user.name}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => logout()}>
+              Log out
+            </Button>
           </div>
         </div>
       </header>
