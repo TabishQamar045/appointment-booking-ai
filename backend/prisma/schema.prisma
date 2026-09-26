@@ -29,6 +29,12 @@ enum UserRole {
   admin
 }
 
+enum AuthProvider {
+  local
+  google
+  facebook
+}
+
 enum ServiceCategory {
   hair
   skin
@@ -41,9 +47,12 @@ enum ServiceCategory {
 model User {
   id           String        @id @default(uuid())
   email        String        @unique
-  passwordHash String        @map("password_hash")
+  // Nullable: OAuth-only accounts (Google/Facebook) never set a password.
+  passwordHash String?       @map("password_hash")
   name         String
   role         UserRole      @default(customer)
+  provider     AuthProvider  @default(local)
+  providerId   String?       @map("provider_id")
   createdAt    DateTime      @default(now()) @map("created_at")
 
   appointments Appointment[]

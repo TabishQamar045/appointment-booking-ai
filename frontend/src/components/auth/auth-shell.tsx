@@ -9,10 +9,11 @@ const FEATURES = [
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid flex-1 lg:grid-cols-2">
-      {/* Marketing panel - hidden below lg, that's what the mobile wordmark
-          in the form panel is for. */}
-      <div className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex">
+    <div className="grid flex-1 md:grid-cols-2">
+      {/* Marketing panel - hidden below md (768px), that's what the mobile
+          wordmark in the form panel is for. Was gated at lg (1024px), which
+          hid it on a lot of ordinary laptop-width browser windows. */}
+      <div className="relative hidden flex-col justify-between overflow-hidden p-12 md:flex">
         <div
           className="pointer-events-none absolute inset-0 -z-10"
           style={{
@@ -56,7 +57,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       {/* Form panel */}
       <div className="relative flex flex-col items-center justify-center gap-6 overflow-hidden p-4">
         <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-40 lg:hidden"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-40 md:hidden"
           style={{
             background:
               "radial-gradient(500px circle at 20% 20%, oklch(0.68 0.24 350 / 25%), transparent), radial-gradient(400px circle at 80% 80%, oklch(0.55 0.22 300 / 20%), transparent)",
@@ -64,7 +65,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         />
         <Link
           href="/"
-          className="flex items-center gap-2 font-heading text-xl font-bold lg:hidden"
+          className="flex items-center gap-2 font-heading text-xl font-bold md:hidden"
         >
           <Sparkles className="h-6 w-6 text-primary" />
           <span className="text-gradient">Glow Studio</span>

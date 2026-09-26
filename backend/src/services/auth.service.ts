@@ -23,9 +23,10 @@ export async function signup(input: SignupInput) {
 
 export async function login(input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
-  if (!user) {
-    // Same message for "no such user" and "wrong password" - don't leak
-    // which one it was.
+  // Same message whether there's no such user, the account is Google-only
+  // (no passwordHash to compare against), or the password is wrong - don't
+  // leak which one it was.
+  if (!user || !user.passwordHash) {
     throw AppError.unauthorized("Invalid email or password", "INVALID_CREDENTIALS");
   }
 
@@ -35,6 +36,32 @@ export async function login(input: LoginInput) {
   }
 
   return toPublicUser(user);
+}
+
+// Google's email comes back pre-verified by Google itself, so we trust it
+// enough to link-or-create by email - the same email logging in via Google
+// today and via password tomorrow lands on the same account. If a Google
+// account by this email doesn't exist yet, one is created with no password
+// (see login()'s !user.passwordHash guard for what that means for them).
+export async function findOrCreateGoogleUser(profile: {
+  googleId: string;
+  email: string;
+  name: string;
+}) {
+  const existing = await prisma.user.findUnique({ where: { email: profile.email } });
+  if (existing) {
+    return toPublicUser(existing);
+  }
+
+  const created = await prisma.user.create({
+    data: {
+      email: profile.email,
+      name: profile.name,
+      provider: "google",
+      providerId: profile.googleId,
+    },
+  });
+  return toPublicUser(created);
 }
 
 export function issueToken(user: { id: string; email: string; role: string }): string {

@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth, isApiError } from "@/contexts/auth-context";
+import { GoogleSignInButton } from "./google-button";
 
 export function SignupForm() {
   const { signup } = useAuth();
@@ -42,6 +43,9 @@ export function SignupForm() {
         <CardTitle className="text-xl">Create an account</CardTitle>
         <CardDescription>Sign up to start booking appointments.</CardDescription>
       </CardHeader>
+      <CardContent className="pb-0">
+        <GoogleSignInButton label="Sign up with Google" />
+      </CardContent>
       <form onSubmit={handleSubmit}>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
