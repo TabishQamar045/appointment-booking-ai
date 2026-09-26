@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AppointmentList } from "@/components/appointments/appointment-list";
@@ -8,11 +9,18 @@ import { BookingForm } from "@/components/appointments/booking-form";
 import { api, ApiError } from "@/lib/api";
 import type { Appointment } from "@/lib/types";
 
-export default function DashboardPage() {
+// useSearchParams() opts the page out of static prerendering unless wrapped
+// in Suspense - split out so the top-level export can provide that boundary.
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  // "Book" on a service card (see /services) links here with ?service=<id>
+  // to open the form pre-filled, rather than dropping the user on a blank
+  // dashboard after they already picked what they want.
+  const preselectedServiceId = searchParams.get("service");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(Boolean(preselectedServiceId));
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +51,11 @@ export default function DashboardPage() {
             Book directly below, or use the chat assistant for a more natural flow.
           </p>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)} variant={showForm ? "outline" : "default"}>
+        <Button
+          onClick={() => setShowForm((v) => !v)}
+          variant={showForm ? "outline" : "default"}
+          className={!showForm ? "gradient-bg text-primary-foreground" : undefined}
+        >
           {showForm ? "Close form" : "Book directly"}
         </Button>
       </div>
@@ -51,6 +63,7 @@ export default function DashboardPage() {
       {showForm && (
         <BookingForm
           description="Manually pick a service, date, and time."
+          initialServiceId={preselectedServiceId}
           onCreated={(appointment) => {
             setAppointments((prev) => [...prev, appointment]);
             setShowForm(false);
@@ -68,5 +81,13 @@ export default function DashboardPage() {
         <AppointmentList appointments={appointments} />
       )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading...</p>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

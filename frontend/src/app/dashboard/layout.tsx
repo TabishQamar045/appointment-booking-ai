@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,10 +19,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b bg-background">
+      <header className="border-b border-border/50 bg-background/70 backdrop-blur-lg">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            <span className="font-semibold">BookIt</span>
+            <Link href="/" className="flex items-center gap-2 font-heading text-lg font-bold">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="text-gradient">Glow Studio</span>
+            </Link>
             <nav className="flex gap-1">
               {NAV_LINKS.map((link) => (
                 <Link key={link.href} href={link.href}>
@@ -34,6 +38,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Button>
                 </Link>
               ))}
+              {user?.role === "admin" && (
+                <Link href="/admin">
+                  <Button variant="ghost" size="sm" className="font-normal">
+                    Admin
+                  </Button>
+                </Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">

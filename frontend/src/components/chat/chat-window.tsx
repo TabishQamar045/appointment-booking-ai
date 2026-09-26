@@ -129,7 +129,7 @@ export function ChatWindow({ sessionId, onAppointmentCreated }: ChatWindowProps)
           <BookingForm
             title="Let's finish booking"
             description="The assistant needs a bit more info - confirm or adjust below."
-            initialService={pendingForm.service}
+            initialServiceName={pendingForm.service}
             initialDate={pendingForm.date}
             initialTime={pendingForm.time}
             onCreated={(appointment) => {

@@ -1,9 +1,10 @@
 import type { ApiErrorBody } from "./types";
 
-// Relative: requests go to the frontend's own origin and are proxied to the
-// backend by the rewrites in next.config.ts, keeping the auth cookie
-// first-party. See next.config.ts for why.
-const API_BASE_URL = "";
+// Relative, under /api: requests go to the frontend's own origin and are
+// proxied to the backend by the rewrites in next.config.ts, keeping the auth
+// cookie first-party. /api avoids colliding with page routes that share a
+// name with a backend resource (e.g. /services, /admin). See next.config.ts.
+const API_BASE_URL = "/api";
 
 export class ApiError extends Error {
   code: string;
@@ -53,4 +54,8 @@ export const api = {
   get: <T>(path: string) => apiFetch<T>(path, { method: "GET" }),
   post: <T>(path: string, data?: unknown) =>
     apiFetch<T>(path, { method: "POST", body: data ? JSON.stringify(data) : undefined }),
+  patch: <T>(path: string, data?: unknown) =>
+    apiFetch<T>(path, { method: "PATCH", body: data ? JSON.stringify(data) : undefined }),
+  put: <T>(path: string, data?: unknown) =>
+    apiFetch<T>(path, { method: "PUT", body: data ? JSON.stringify(data) : undefined }),
 };

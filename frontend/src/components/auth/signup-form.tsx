@@ -81,7 +81,11 @@ export function SignupForm() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter className="flex flex-col gap-4 mt-2">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            className="w-full gradient-bg text-primary-foreground"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Creating account..." : "Sign up"}
           </Button>
           <p className="text-sm text-muted-foreground">

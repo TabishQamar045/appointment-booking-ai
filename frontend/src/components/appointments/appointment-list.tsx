@@ -10,6 +10,18 @@ const STATUS_VARIANT: Record<AppointmentStatus, "default" | "secondary" | "destr
   cancelled: "destructive",
 };
 
+// Formats with an explicit UTC timezone, matching how scheduledAt was
+// constructed (a fixed salon wall-clock, not a real timezone-aware instant -
+// see backend/src/services/availability.service.ts). Without this, a
+// viewer's browser would silently shift the displayed time.
+function formatScheduledAt(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  });
+}
+
 export function AppointmentList({ appointments }: { appointments: Appointment[] }) {
   if (appointments.length === 0) {
     return (
@@ -27,12 +39,10 @@ export function AppointmentList({ appointments }: { appointments: Appointment[] 
         <Card key={appt.id}>
           <CardContent className="flex items-center justify-between py-4">
             <div>
-              <p className="font-medium">{appt.serviceName}</p>
-              <p className="text-sm text-muted-foreground">
-                {new Date(appt.scheduledAt).toLocaleString(undefined, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
+              <p className="font-medium">{appt.service.name}</p>
+              <p className="text-sm text-muted-foreground">{formatScheduledAt(appt.scheduledAt)}</p>
+              <p className="text-xs text-muted-foreground">
+                {appt.service.durationMinutes} min &middot; ${appt.service.price}
               </p>
               {appt.notes && (
                 <p className="mt-1 text-xs text-muted-foreground italic">{appt.notes}</p>
