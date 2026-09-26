@@ -4,6 +4,18 @@ import { assertSlotAvailable } from "./availability.service";
 import type { CreateAppointmentInput } from "../schemas/appointment.schema";
 import type { AppointmentStatus } from "@prisma/client";
 
+export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
+  const appointment = await prisma.appointment.findUnique({ where: { id } });
+  if (!appointment) {
+    throw AppError.notFound("Appointment not found", "APPOINTMENT_NOT_FOUND");
+  }
+  return prisma.appointment.update({
+    where: { id },
+    data: { status },
+    include: { service: true, user: { select: { id: true, name: true, email: true } } },
+  });
+}
+
 export async function listAppointments(userId: string, status?: AppointmentStatus) {
   return prisma.appointment.findMany({
     where: { userId, ...(status ? { status } : {}) },

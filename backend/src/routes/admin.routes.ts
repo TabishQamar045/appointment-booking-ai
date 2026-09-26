@@ -10,6 +10,7 @@ import { updateBusinessHoursSchema } from "../schemas/businessHours.schema";
 import {
   adminCreateAppointmentSchema,
   listAppointmentsQuerySchema,
+  updateAppointmentStatusSchema,
 } from "../schemas/appointment.schema";
 import { asyncHandler } from "../lib/asyncHandler";
 
@@ -41,6 +42,11 @@ router.post(
   "/appointments",
   validate(adminCreateAppointmentSchema),
   asyncHandler(appointmentsController.adminCreate)
+);
+router.patch(
+  "/appointments/:id",
+  validate(updateAppointmentStatusSchema),
+  asyncHandler(appointmentsController.adminUpdateStatus)
 );
 
 router.get("/customers", asyncHandler(customersController.list));

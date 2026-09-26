@@ -20,6 +20,7 @@ export default function AdminAppointmentsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -33,6 +34,21 @@ export default function AdminAppointmentsPage() {
       .catch((err) => toast.error(err instanceof ApiError ? err.message : "Could not load appointments."))
       .finally(() => setIsLoading(false));
   }, []);
+
+  async function updateStatus(id: string, status: Appointment["status"]) {
+    setUpdatingId(id);
+    try {
+      const res = await api.patch<{ appointment: Appointment }>(`/admin/appointments/${id}`, {
+        status,
+      });
+      setAppointments((prev) => prev.map((a) => (a.id === id ? res.appointment : a)));
+      toast.success(status === "confirmed" ? "Appointment confirmed" : "Appointment cancelled");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not update appointment.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,6 +107,28 @@ export default function AdminAppointmentsPage() {
                       timeStyle: "short",
                     })}
                   </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  {appt.status === "pending" && (
+                    <Button
+                      size="sm"
+                      disabled={updatingId === appt.id}
+                      className="gradient-bg text-primary-foreground"
+                      onClick={() => updateStatus(appt.id, "confirmed")}
+                    >
+                      Confirm
+                    </Button>
+                  )}
+                  {appt.status !== "cancelled" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={updatingId === appt.id}
+                      onClick={() => updateStatus(appt.id, "cancelled")}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

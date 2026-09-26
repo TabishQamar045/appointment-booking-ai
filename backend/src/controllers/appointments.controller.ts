@@ -26,3 +26,11 @@ export async function adminCreate(req: Request, res: Response) {
   const appointment = await appointmentsService.createAppointment(userId, input);
   res.status(201).json({ appointment });
 }
+
+export async function adminUpdateStatus(req: Request, res: Response) {
+  const appointment = await appointmentsService.updateAppointmentStatus(
+    req.params.id,
+    req.body.status
+  );
+  res.status(200).json({ appointment });
+}
