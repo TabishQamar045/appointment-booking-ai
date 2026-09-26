@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -16,7 +17,7 @@ const NAV_LINKS = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, isLoggingOut } = useAuth();
   const pathname = usePathname();
 
   // proxy.ts only checks whether *a* cookie is present, not whether it's
@@ -36,12 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, user]);
 
-  if (isLoading || !user) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-        Loading...
-      </div>
-    );
+  if (isLoading || !user || isLoggingOut) {
+    return <LoadingScreen />;
   }
 
   return (

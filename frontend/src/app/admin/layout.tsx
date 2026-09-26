@@ -7,6 +7,7 @@ import { Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -17,7 +18,7 @@ const NAV_LINKS = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, isLoggingOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -41,12 +42,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, user, router]);
 
-  if (isLoading || !user || user.role !== "admin") {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-        Loading...
-      </div>
-    );
+  if (isLoading || !user || user.role !== "admin" || isLoggingOut) {
+    return <LoadingScreen />;
   }
 
   return (
