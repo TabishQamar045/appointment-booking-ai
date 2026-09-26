@@ -46,7 +46,7 @@ export function MarketingNavbar() {
           {!isLoading && user ? (
             <Link href={user.role === "admin" ? "/admin" : "/dashboard"}>
               <Button size="sm" className="gradient-bg text-primary-foreground">
-                Go to {user.role === "admin" ? "Admin" : "Dashboard"}
+                {user.role === "admin" ? "Go to Admin" : "My Appointments"}
               </Button>
             </Link>
           ) : (
