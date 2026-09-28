@@ -49,7 +49,19 @@ jobs:
       - name: Type-check (src + tests)
         run: npm run typecheck:test
 
-      - run: npm test
+      # Fails the job (non-zero exit) if coverage drops below the 60%
+      # global floor set in vitest.config.ts - not just a report nobody
+      # reads.
+      - name: Run tests with coverage
+        run: npm test
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
 
   e2e:
     name: E2E (Playwright)
