@@ -112,7 +112,7 @@ export async function extractBookingInfo(
   return parseExtraction(raw);
 }
 
-function parseExtraction(raw: string): BookingExtraction {
+export function parseExtraction(raw: string): BookingExtraction {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
