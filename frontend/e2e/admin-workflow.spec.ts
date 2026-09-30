@@ -19,7 +19,7 @@ test("admin confirms a customer's booking, and the customer is notified", async 
 
   const email = randomEmail("confirm-flow");
   await signup(customerPage, { name: "Confirm Flow Customer", email });
-  const date = futureOpenDateStr(12); // distinct day - see helpers.ts
+  const date = futureOpenDateStr(30); // distinct day - see helpers.ts
 
   await bookViaForm(customerPage, "Hair Coloring", date);
   await expect(customerPage.getByText("Hair Coloring").first()).toBeVisible();
@@ -61,7 +61,7 @@ test("admin cancels with a reason, and the customer sees the reason (not a nativ
 
   const email = randomEmail("cancel-flow");
   await signup(customerPage, { name: "Cancel Flow Customer", email });
-  const date = futureOpenDateStr(13); // distinct day - see helpers.ts
+  const date = futureOpenDateStr(40); // distinct day - see helpers.ts
 
   await bookViaForm(customerPage, "Massage Therapy", date);
   await expect(customerPage.getByText("Massage Therapy").first()).toBeVisible();

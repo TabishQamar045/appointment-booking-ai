@@ -10,7 +10,7 @@ test("a new customer can sign up and book a real appointment through the form", 
   await page.locator("#service").click();
   await page.getByRole("option", { name: /Facials/ }).click();
 
-  await page.fill("#date", futureOpenDateStr());
+  await page.fill("#date", futureOpenDateStr(10));
   // Slot buttons only render once availability has loaded for the chosen
   // service+date - the picker showing at all is itself proof the
   // GET /availability round-trip through the proxy worked.
@@ -42,7 +42,7 @@ test("a slot someone else just booked disappears from a second customer's picker
   await signup(pageA, { name: "First Booker", email: randomEmail("conflict-a") });
   await signup(pageB, { name: "Second Booker", email: randomEmail("conflict-b") });
 
-  const date = futureOpenDateStr(11); // distinct day from the test above - shared calendar, see helpers.ts
+  const date = futureOpenDateStr(20); // distinct day from the test above - shared calendar, see helpers.ts
 
   await pageA.click('button:has-text("Book directly")');
   await pageA.locator("#service").click();

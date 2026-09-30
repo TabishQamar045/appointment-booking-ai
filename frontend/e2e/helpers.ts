@@ -33,9 +33,20 @@ export async function login(page: Page, email: string, password = "password123")
 // IMPORTANT: the salon is one shared calendar across every service (see
 // availability.service.ts) - a booking for ANY service blocks overlapping
 // times for every OTHER service that same day too. Tests run fullyParallel,
-// so any two tests that book must pass explicit, different `daysAhead`
-// values or they'll race for the same day's slots and fail intermittently.
-// Each call site across the whole e2e/ suite should use its own number.
+// so any two tests that book must land on different actual dates or they'll
+// race for the same day's slots and fail intermittently.
+//
+// This bit CI in practice: two call sites used `daysAhead` of 11 and 12,
+// which looked distinct, but the Sunday-skip below can shift a date forward
+// by a day - on the date main was tested against, 11 landed on a Sunday and
+// rolled forward onto the exact same day 12 already used, and whichever
+// test's booking ran first silently blocked the other's. It only showed up
+// in CI because it depends on which real calendar day "today" is when the
+// suite runs, which local testing on one particular day can't catch.
+//
+// The fix: space every call site's `daysAhead` at least 10 apart (10, 20,
+// 30, ...) - the Sunday-skip only ever shifts a date by up to 1 day, so a
+// gap that wide can never collide regardless of what day "today" is.
 export function futureOpenDateStr(daysAhead = 10): string {
   const d = new Date();
   d.setDate(d.getDate() + daysAhead);
