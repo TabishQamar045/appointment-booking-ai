@@ -206,25 +206,3 @@ form, pre-filled with whatever the AI already extracted.
 WebSockets, no `business_id`/multi-tenancy, no demo video, no rate-limiting
 beyond a sensible global + auth-specific limit via `express-rate-limit`
 defaults, no custom design system beyond shadcn/ui's defaults.
-
-## Known limitations
-
-- No appointment editing, cancellation, or rescheduling from the UI (model
-  and status enum support it; no endpoints/UI were built for it).
-- No password reset / email verification flow.
-- The AI's date resolution ("tomorrow", "next Tuesday") depends entirely on
-  the system prompt telling the model today's date — there's no
-  server-side validation that the resolved date is actually in the future
-  before auto-booking (the manual form does enforce a `min` on the date
-  input; the AI path does not).
-- Chat history sent to Mistral is capped at the last 10 messages
-  (per the brief) with no summarization of anything older — a very long
-  conversation could lose earlier context.
-- No automated test suite (unit/integration/e2e) — verified manually via
-  curl for the API and a scripted Playwright pass for the UI during
-  development, but neither is checked into the repo.
-- Rate limiting is process-local (in-memory via `express-rate-limit`) —
-  fine for one instance, would need a shared store (e.g. Redis) behind a
-  load balancer.
-- No pagination on the appointments list or chat message history; fine at
-  prototype scale, would matter with real usage volume.
