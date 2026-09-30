@@ -1,14 +1,3 @@
-# BookIt — Appointment Booking with an AI Chat Assistant
-
-A take-home assessment prototype: a full-stack appointment-booking app where
-users can book through a normal form *or* by chatting naturally with an AI
-assistant that extracts the booking details (service, date, time) and books
-it for them.
-
-Built in ~24 hours, prioritizing a working, coherent end-to-end slice over
-completeness. Assumptions and cut corners are called out explicitly below
-and in code comments near the relevant decision.
-
 ## Architecture
 
 ```
